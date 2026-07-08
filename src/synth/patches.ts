@@ -132,12 +132,12 @@ export function defaultPatches(): Patch[] {
     },
     {
       name: 'Snare Drum', short: 'SD', color: 'red', ch: 1,
-      alg: 4, fb: 7, note: 54, sweep: { toNote: 50, ms: 30 }, accentBoost: 8,
+      alg: 4, fb: 7, note: 54, accentBoost: 8,
       ops: [
-        op({ mul: 13, tl: 32, ar: 31, d1r: 17, d1l: 15, d2r: 0, rr: 15 }), // M1 noise src (FB7)
-        op({ mul: 1, tl: 72, ar: 31, d1r: 19, d1l: 15, d2r: 0, rr: 15 }), // M2 body mod
-        op({ mul: 6, tl: 8, ar: 31, d1r: 16, d1l: 15, d2r: 0, rr: 13, dt2: 3 }), // C1 snappy
-        op({ mul: 1, tl: 5, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 13 }), // C2 tone ~185Hz
+        op({ mul: 15, tl: 22, ar: 31, d1r: 16, d1l: 15, d2r: 0, rr: 15 }), // M1 noise src (FB7, deep mod)
+        op({ mul: 1, tl: 78, ar: 31, d1r: 20, d1l: 15, d2r: 0, rr: 15 }), // M2 body mod
+        op({ mul: 11, tl: 8, ar: 31, d1r: 16, d1l: 15, d2r: 0, rr: 13 }), // C1 noise snap
+        op({ mul: 1, tl: 4, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 13 }), // C2 tone ~185Hz
       ],
     },
     {
