@@ -116,55 +116,57 @@ export function compilePatch(p: Patch): TriggerSpec {
 // The nine voices. Channel plan: BD0 SD1 LT2 MT3 HT4 CB5 CP6 OH/CH7(noise)
 // ---------------------------------------------------------------------------
 
+// Envelope note: D1L is *attenuation* (0 = sustain at full level!). Percussive
+// voices need d1l:15 so D1R carries the level all the way down.
 export function defaultPatches(): Patch[] {
   return [
     {
       name: 'Bass Drum', short: 'BD', color: 'red', ch: 0,
-      alg: 4, fb: 3, note: 43, sweep: { toNote: 26, ms: 55 }, accentBoost: 10,
+      alg: 4, fb: 4, note: 57, sweep: { toNote: 33, ms: 40 }, accentBoost: 8,
       ops: [
-        op({ mul: 1, tl: 55, ar: 31, d1r: 22, d1l: 15, d2r: 0, rr: 15 }), // M1 punch
+        op({ mul: 1, tl: 36, ar: 31, d1r: 17, d1l: 15, d2r: 0, rr: 15 }), // M1 attack click
         op({ tl: 127 }), // M2 unused
-        op({ mul: 0, tl: 8, ar: 31, d1r: 4, d1l: 0, d2r: 7, rr: 10 }), // C1 body (mul0 = 0.5x)
+        op({ mul: 1, tl: 0, ar: 31, d1r: 13, d1l: 15, d2r: 0, rr: 12 }), // C1 body ~55Hz
         op({ tl: 127 }), // C2 unused
       ],
     },
     {
       name: 'Snare Drum', short: 'SD', color: 'red', ch: 1,
-      alg: 4, fb: 7, note: 55, accentBoost: 10,
+      alg: 4, fb: 7, note: 54, sweep: { toNote: 50, ms: 30 }, accentBoost: 8,
       ops: [
-        op({ mul: 6, tl: 38, ar: 31, d1r: 16, d1l: 15, d2r: 0, rr: 15, dt2: 3 }), // M1 noise-ish (FB7)
-        op({ mul: 1, tl: 60, ar: 31, d1r: 18, d1l: 15, d2r: 0, rr: 15 }), // M2 body mod
-        op({ mul: 3, tl: 22, ar: 31, d1r: 13, d1l: 0, d2r: 16, rr: 12, dt2: 3 }), // C1 snappy
-        op({ mul: 1, tl: 14, ar: 31, d1r: 12, d1l: 0, d2r: 18, rr: 12 }), // C2 tone ~196Hz
+        op({ mul: 13, tl: 32, ar: 31, d1r: 17, d1l: 15, d2r: 0, rr: 15 }), // M1 noise src (FB7)
+        op({ mul: 1, tl: 72, ar: 31, d1r: 19, d1l: 15, d2r: 0, rr: 15 }), // M2 body mod
+        op({ mul: 6, tl: 8, ar: 31, d1r: 16, d1l: 15, d2r: 0, rr: 13, dt2: 3 }), // C1 snappy
+        op({ mul: 1, tl: 5, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 13 }), // C2 tone ~185Hz
       ],
     },
     {
       name: 'Low Tom', short: 'LT', color: 'orange', ch: 2,
-      alg: 4, fb: 2, note: 38, sweep: { toNote: 33, ms: 120 },
+      alg: 4, fb: 3, note: 46, sweep: { toNote: 40, ms: 120 },
       ops: [
-        op({ mul: 1, tl: 60, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 15 }),
+        op({ mul: 1, tl: 45, ar: 31, d1r: 18, d1l: 15, d2r: 0, rr: 15 }),
         op({ tl: 127 }),
-        op({ mul: 1, tl: 6, ar: 31, d1r: 7, d1l: 0, d2r: 12, rr: 11 }),
+        op({ mul: 1, tl: 4, ar: 31, d1r: 12, d1l: 15, d2r: 0, rr: 11 }), // ~82Hz
         op({ tl: 127 }),
       ],
     },
     {
       name: 'Mid Tom', short: 'MT', color: 'orange', ch: 3,
-      alg: 4, fb: 2, note: 45, sweep: { toNote: 40, ms: 100 },
+      alg: 4, fb: 3, note: 53, sweep: { toNote: 47, ms: 100 },
       ops: [
-        op({ mul: 1, tl: 60, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 15 }),
+        op({ mul: 1, tl: 45, ar: 31, d1r: 18, d1l: 15, d2r: 0, rr: 15 }),
         op({ tl: 127 }),
-        op({ mul: 1, tl: 6, ar: 31, d1r: 8, d1l: 0, d2r: 13, rr: 11 }),
+        op({ mul: 1, tl: 4, ar: 31, d1r: 13, d1l: 15, d2r: 0, rr: 11 }), // ~123Hz
         op({ tl: 127 }),
       ],
     },
     {
       name: 'Hi Tom', short: 'HT', color: 'orange', ch: 4,
-      alg: 4, fb: 2, note: 52, sweep: { toNote: 47, ms: 90 },
+      alg: 4, fb: 3, note: 59, sweep: { toNote: 53, ms: 80 },
       ops: [
-        op({ mul: 1, tl: 60, ar: 31, d1r: 16, d1l: 15, d2r: 0, rr: 15 }),
+        op({ mul: 1, tl: 45, ar: 31, d1r: 18, d1l: 15, d2r: 0, rr: 15 }),
         op({ tl: 127 }),
-        op({ mul: 1, tl: 6, ar: 31, d1r: 9, d1l: 0, d2r: 14, rr: 11 }),
+        op({ mul: 1, tl: 4, ar: 31, d1r: 13, d1l: 15, d2r: 0, rr: 11 }), // ~175Hz
         op({ tl: 127 }),
       ],
     },
@@ -174,38 +176,38 @@ export function defaultPatches(): Patch[] {
       ops: [
         op({ mul: 7, tl: 52, ar: 31, d1r: 20, d1l: 15, d2r: 0, rr: 15 }), // M1 clang
         op({ mul: 7, tl: 58, ar: 31, d1r: 20, d1l: 15, d2r: 0, rr: 15, dt2: 1 }),
-        op({ mul: 2, tl: 16, ar: 31, d1r: 14, d1l: 3, d2r: 12, rr: 13 }), // C1 ~540Hz
-        op({ mul: 3, tl: 18, ar: 31, d1r: 14, d1l: 3, d2r: 12, rr: 13 }), // C2 ~810Hz
+        op({ mul: 2, tl: 10, ar: 31, d1r: 14, d1l: 3, d2r: 12, rr: 13 }), // C1 ~540Hz
+        op({ mul: 3, tl: 12, ar: 31, d1r: 14, d1l: 3, d2r: 12, rr: 13 }), // C2 ~810Hz
       ],
     },
     {
       name: 'Hand Clap', short: 'CP', color: 'yellow', ch: 6,
-      alg: 5, fb: 7, note: 74, retrigMs: [11, 23], accentBoost: 8,
+      alg: 5, fb: 7, note: 65, retrigMs: [11, 23], accentBoost: 8,
       ops: [
-        op({ mul: 8, tl: 30, ar: 31, d1r: 12, d1l: 15, d2r: 0, rr: 15, dt2: 3 }), // M1 noisy (FB7)
-        op({ mul: 5, tl: 24, ar: 31, d1r: 15, d1l: 2, d2r: 14, rr: 13, dt2: 2 }),
-        op({ mul: 4, tl: 26, ar: 31, d1r: 15, d1l: 2, d2r: 14, rr: 13, dt2: 3 }),
-        op({ mul: 6, tl: 28, ar: 31, d1r: 13, d1l: 2, d2r: 13, rr: 13, dt2: 1 }),
+        op({ mul: 4, tl: 22, ar: 31, d1r: 14, d1l: 15, d2r: 0, rr: 15, dt2: 3 }), // M1 noise src (FB7)
+        op({ mul: 2, tl: 8, ar: 31, d1r: 17, d1l: 15, d2r: 0, rr: 13, dt2: 1 }),
+        op({ mul: 3, tl: 8, ar: 31, d1r: 17, d1l: 15, d2r: 0, rr: 13, dt2: 3 }),
+        op({ mul: 4, tl: 10, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 13, dt2: 2 }), // longer tail
       ],
     },
     {
       name: 'Open Hat', short: 'OH', color: 'white', ch: 7,
-      alg: 7, fb: 6, note: 91, noiseFreq: 26, gateMs: 450,
+      alg: 7, fb: 6, note: 91, noiseFreq: 26, gateMs: 600,
       ops: [
-        op({ mul: 11, tl: 42, ar: 31, d1r: 8, d1l: 4, d2r: 8, rr: 9, dt2: 2 }), // metallic partials
-        op({ mul: 7, tl: 44, ar: 31, d1r: 8, d1l: 4, d2r: 8, rr: 9, dt2: 3 }),
-        op({ mul: 13, tl: 46, ar: 31, d1r: 8, d1l: 4, d2r: 8, rr: 9, dt2: 1 }),
-        op({ mul: 15, tl: 26, ar: 31, d1r: 7, d1l: 3, d2r: 8, rr: 9 }), // C2 = noise slot
+        op({ mul: 11, tl: 20, ar: 31, d1r: 14, d1l: 15, d2r: 0, rr: 10, dt2: 2 }), // metallic partials
+        op({ mul: 7, tl: 22, ar: 31, d1r: 14, d1l: 15, d2r: 0, rr: 10, dt2: 3 }),
+        op({ mul: 13, tl: 24, ar: 31, d1r: 14, d1l: 15, d2r: 0, rr: 10, dt2: 1 }),
+        op({ mul: 15, tl: 0, ar: 31, d1r: 13, d1l: 15, d2r: 0, rr: 10 }), // C2 = noise slot
       ],
     },
     {
       name: 'Closed Hat', short: 'CH', color: 'white', ch: 7,
       alg: 7, fb: 6, note: 91, noiseFreq: 26, accentBoost: 8,
       ops: [
-        op({ mul: 11, tl: 44, ar: 31, d1r: 22, d1l: 15, d2r: 0, rr: 15, dt2: 2 }),
-        op({ mul: 7, tl: 46, ar: 31, d1r: 22, d1l: 15, d2r: 0, rr: 15, dt2: 3 }),
-        op({ mul: 13, tl: 48, ar: 31, d1r: 22, d1l: 15, d2r: 0, rr: 15, dt2: 1 }),
-        op({ mul: 15, tl: 28, ar: 31, d1r: 21, d1l: 15, d2r: 0, rr: 15 }),
+        op({ mul: 11, tl: 24, ar: 31, d1r: 22, d1l: 15, d2r: 0, rr: 15, dt2: 2 }),
+        op({ mul: 7, tl: 26, ar: 31, d1r: 22, d1l: 15, d2r: 0, rr: 15, dt2: 3 }),
+        op({ mul: 13, tl: 28, ar: 31, d1r: 22, d1l: 15, d2r: 0, rr: 15, dt2: 1 }),
+        op({ mul: 15, tl: 0, ar: 31, d1r: 20, d1l: 15, d2r: 0, rr: 15 }),
       ],
     },
   ]

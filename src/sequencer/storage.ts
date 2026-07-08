@@ -1,6 +1,19 @@
 import type { AppState } from './pattern'
+import { defaultPatches } from '../synth/patches'
 
 const KEY = '2151-808-state'
+
+/** Accept current-version state as-is; salvage patterns from v1 (its patches
+ *  had broken envelopes) by resetting patches to the current defaults. */
+function migrate(s: unknown): AppState | null {
+  const st = s as AppState | null
+  if (!st || typeof st !== 'object') return null
+  if (st.version === 2) return st
+  if ((st.version as number) === 1) {
+    return { ...st, version: 2, patches: defaultPatches() }
+  }
+  return null
+}
 
 export function saveLocal(state: AppState): void {
   try {
@@ -14,8 +27,7 @@ export function loadLocal(): AppState | null {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return null
-    const s = JSON.parse(raw)
-    return s?.version === 1 ? (s as AppState) : null
+    return migrate(JSON.parse(raw))
   } catch {
     return null
   }
@@ -40,8 +52,7 @@ export function stateFromHash(hash: string): AppState | null {
   const m = hash.match(/^#p=(.+)$/)
   if (!m) return null
   try {
-    const s = JSON.parse(fromBase64Url(m[1]))
-    return s?.version === 1 ? (s as AppState) : null
+    return migrate(JSON.parse(fromBase64Url(m[1])))
   } catch {
     return null
   }

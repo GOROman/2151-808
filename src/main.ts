@@ -71,7 +71,7 @@ function initialState(): AppState {
   const local = loadLocal()
   if (local) return local
   return {
-    version: 1,
+    version: 2,
     tempo: 126,
     swing: 0,
     mode: 'A',
