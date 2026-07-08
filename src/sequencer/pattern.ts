@@ -2,7 +2,7 @@ import { NUM_INSTRUMENTS, NUM_STEPS, type StepGrid } from '../audio/messages'
 import type { Patch } from '../synth/patches'
 
 export interface AppState {
-  version: 2
+  version: 3
   tempo: number
   swing: number
   mode: 'A' | 'B' | 'AB'

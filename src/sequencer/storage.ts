@@ -3,14 +3,17 @@ import { defaultPatches } from '../synth/patches'
 
 const KEY = '2151-808-state'
 
-/** Accept current-version state as-is; salvage patterns from v1 (its patches
- *  had broken envelopes) by resetting patches to the current defaults. */
+const VERSION = 3
+
+/** Accept current-version state as-is; salvage patterns from older versions
+ *  (their default patches were broken) by resetting patches to the current
+ *  defaults. */
 function migrate(s: unknown): AppState | null {
   const st = s as AppState | null
-  if (!st || typeof st !== 'object') return null
-  if (st.version === 2) return st
-  if ((st.version as number) === 1) {
-    return { ...st, version: 2, patches: defaultPatches() }
+  if (!st || typeof st !== 'object' || typeof st.version !== 'number') return null
+  if (st.version === VERSION) return st
+  if (st.version < VERSION) {
+    return { ...st, version: VERSION, patches: defaultPatches() }
   }
   return null
 }
