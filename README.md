@@ -4,6 +4,8 @@ TR-808 スタイルの 16 ステップシーケンサーで、**YM2151 (OPM) の
 
 **▶ https://goroman.github.io/2151-808/**
 
+![YM-808 Rhythm Composer](docs/screenshot.png)
+
 ## 特徴
 
 - **本物の YM2151 コア**: [ymfm](https://github.com/aaronsgiles/ymfm) (Aaron Giles) を WebAssembly にビルドし、AudioWorklet 内でレジスタ書き込みベースで駆動。チップネイティブレート (3.579545MHz ÷ 64 ≈ 55.93kHz) で生成し、リサンプルして出力
