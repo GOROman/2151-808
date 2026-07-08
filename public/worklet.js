@@ -137,7 +137,9 @@ class OpmProcessor extends AudioWorkletProcessor {
       const tl = Math.max(0, Math.min(127, c.base - (accent ? t.accentBoost : 0)))
       this.write(c.reg, tl)
     }
-    this.write(0x08, 0x78 | t.ch)
+    // Key-on must land on a later chip clock than the key-off above, or the
+    // EG never sees an off->on edge and a still-keyed channel stays silent.
+    this.pushEvent(atFrame + 1, 0x08, 0x78 | t.ch, t.ch)
 
     for (const s of t.sweep) {
       const f = atFrame + this.msToFrames(s.ms)
@@ -147,7 +149,7 @@ class OpmProcessor extends AudioWorkletProcessor {
     for (const ms of t.retrigMs) {
       const f = atFrame + this.msToFrames(ms)
       this.pushEvent(f, 0x08, t.ch, t.ch) // off
-      this.pushEvent(f, 0x08, 0x78 | t.ch, t.ch) // on again
+      this.pushEvent(f + 1, 0x08, 0x78 | t.ch, t.ch) // on again, one frame later
     }
     if (t.gateMs > 0) this.pushEvent(atFrame + this.msToFrames(t.gateMs), 0x08, t.ch, t.ch)
   }

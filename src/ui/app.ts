@@ -223,9 +223,9 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
 
   function refreshSteps(): void {
     const row = grid()[selectedInst]
-    stepBtns.forEach((b, s) => {
-      b.classList.toggle('on', row[s] === 1)
-      b.classList.toggle('accent', row[s] === 2)
+    stepBtns.forEach((_b, s) => {
+      leds[s].classList.toggle('set', row[s] >= 1)
+      leds[s].classList.toggle('accent', row[s] === 2)
     })
   }
   refreshSteps()
