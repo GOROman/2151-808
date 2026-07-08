@@ -15,9 +15,14 @@ class AudioEngine {
   ready = false
   onMessage: ((m: FromWorklet) => void) | null = null
 
+  /** Call from a user-gesture handler; safe to call repeatedly. */
+  resume(): void {
+    void this.ctx?.resume().catch(() => {})
+  }
+
   async start(): Promise<void> {
     if (this.ctx) {
-      await this.ctx.resume()
+      this.resume()
       return
     }
     const ctx = new AudioContext({ latencyHint: 'interactive' })
@@ -47,10 +52,11 @@ class AudioEngine {
     }
     this.node = node
     node.port.postMessage({ type: 'wasm', bytes: wasmBytes } satisfies ToWorklet, [wasmBytes])
-    await ctx.resume()
+    this.resume()
   }
 
   send(msg: ToWorklet): void {
+    if (msg.type === 'play' || msg.type === 'preview') this.resume()
     if (!this.node || !this.ready) {
       this.queue.push(msg)
       return
