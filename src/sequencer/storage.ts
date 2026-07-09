@@ -3,19 +3,21 @@ import { defaultPatches, type Patch } from '../synth/patches'
 
 const KEY = '2151-808-state'
 
-const VERSION = 5
+const VERSION = 6
 
 /** Accept current-version state as-is; upgrade older versions in place.
- *  v5 adds sequence length (grids widen to 64 steps) and swaps in the new
- *  default BD (Dragon Spirit @1) and 808-style CB voices; v4 gained the
- *  filter section; pre-v3 default patches were broken, so those get all
- *  patches reset. */
+ *  Voice redesigns are pushed into saved sessions by replacing just the
+ *  instruments that changed after the saved version: v6 reworked
+ *  SD/CP/OH/CH (808 style), v5 reworked BD (Dragon Spirit @1) and CB and
+ *  added sequence length + filter. Pre-v3 default patches were broken, so
+ *  those get all patches reset. */
 function migrate(s: unknown): AppState | null {
   const st = s as AppState | null
   if (!st || typeof st !== 'object' || typeof st.version !== 'number') return null
   if (st.version === VERSION) return st
   if (st.version < VERSION) {
     const fresh = defaultPatches()
+    const changed = st.version >= 5 ? [1, 6, 7, 8] : [0, 1, 5, 6, 7, 8]
     return {
       ...st,
       version: VERSION,
@@ -23,7 +25,7 @@ function migrate(s: unknown): AppState | null {
       patterns: { a: padGrid(st.patterns.a), b: padGrid(st.patterns.b) },
       patches:
         st.version >= 3
-          ? st.patches.map((p, i) => (i === 0 || i === 5 ? fresh[i] : p))
+          ? st.patches.map((p, i) => (changed.includes(i) ? fresh[i] : p))
           : fresh,
       filter: st.filter ?? defaultFilter(),
     }

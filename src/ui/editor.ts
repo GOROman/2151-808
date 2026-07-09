@@ -25,6 +25,7 @@ const OP_PARAMS: ParamDef[] = [
 ]
 
 const OP_NAMES = ['M1', 'M2', 'C1', 'C2']
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
 export function buildEditor(
   host: HTMLElement,
@@ -75,11 +76,62 @@ export function buildEditor(
     chRow.className = 'oprow chrow'
     chRow.appendChild(slider('ALG', p.alg, 7, (v) => (p.alg = v)))
     chRow.appendChild(slider('FB', p.fb, 7, (v) => (p.fb = v)))
-    chRow.appendChild(slider('NOTE', Math.round(p.note), 96, (v) => {
-      const d = v - Math.round(p.note)
-      p.note = v
-      if (p.sweep) p.sweep.toNote += d
-    }))
+
+    // pitch: note name + octave + fine detune (cents)
+    {
+      const w = document.createElement('div')
+      w.className = 'param notectl'
+      const l = document.createElement('label')
+      const val = document.createElement('b')
+      l.textContent = 'NOTE '
+      l.appendChild(val)
+      const row = document.createElement('div')
+      row.className = 'noterow'
+      const noteSel = document.createElement('select')
+      NOTE_NAMES.forEach((n, i) => {
+        const o = document.createElement('option')
+        o.value = String(i)
+        o.textContent = n
+        noteSel.appendChild(o)
+      })
+      const octSel = document.createElement('select')
+      for (let o = 0; o <= 8; o++) {
+        const e = document.createElement('option')
+        e.value = String(o)
+        e.textContent = String(o)
+        octSel.appendChild(e)
+      }
+      const fine = document.createElement('input')
+      fine.type = 'range'
+      fine.min = '-50'
+      fine.max = '50'
+      fine.className = 'fine'
+      const sync = (): void => {
+        const semi = Math.round(p.note)
+        noteSel.value = String(((semi % 12) + 12) % 12)
+        octSel.value = String(Math.max(0, Math.min(8, Math.floor(semi / 12))))
+        const cents = Math.round((p.note - semi) * 100)
+        fine.value = String(cents)
+        val.textContent = `${NOTE_NAMES[Number(noteSel.value)]}${octSel.value}${cents ? (cents > 0 ? ' +' : ' ') + cents + 'c' : ''}`
+      }
+      const apply = (): void => {
+        const target = Number(octSel.value) * 12 + Number(noteSel.value) + Number(fine.value) / 100
+        const clamped = Math.max(0, Math.min(96, target))
+        const d = clamped - p.note
+        p.note = clamped
+        if (p.sweep) p.sweep.toNote += d
+        sync()
+        onChange()
+        preview(inst, false)
+      }
+      noteSel.onchange = apply
+      octSel.onchange = apply
+      fine.oninput = apply
+      sync()
+      row.append(noteSel, octSel, fine)
+      w.append(l, row)
+      chRow.appendChild(w)
+    }
     if (p.sweep) {
       const sw = p.sweep
       chRow.appendChild(slider('SWEEP', Math.round(p.note - sw.toNote), 36, (v) => (sw.toNote = p.note - v)))

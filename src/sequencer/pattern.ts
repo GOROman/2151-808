@@ -2,7 +2,7 @@ import { MAX_STEPS, NUM_INSTRUMENTS, type FilterParams, type StepGrid } from '..
 import type { Patch } from '../synth/patches'
 
 export interface AppState {
-  version: 5
+  version: 6
   tempo: number
   swing: number
   mode: 'A' | 'B' | 'AB'

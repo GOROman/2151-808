@@ -193,6 +193,17 @@ input[type="range"] { accent-color: var(--red); width: 110px; }
 .param { display: flex; flex-direction: column; font-size: 9px; color: var(--dim); }
 .param label b { color: var(--text); margin-left: 3px; }
 .param input[type="range"] { width: 72px; }
+.noterow { display: flex; gap: 4px; align-items: center; }
+.noterow select {
+  background: #1a0f0d;
+  color: var(--led);
+  border: 1px solid #17171a;
+  border-radius: 3px;
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-size: 11px;
+  padding: 2px 3px;
+}
+.noterow .fine { width: 56px; }
 
 /* MDX voice import */
 .mdxrow {

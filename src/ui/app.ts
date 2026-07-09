@@ -323,12 +323,14 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
     const wrap = el('div', 'stepwrap')
     const led = el('div', 'led')
     const b = el('button', `step ${STEP_COLORS[s]}`, String(s + 1)) as HTMLButtonElement
-    b.onclick = async () => {
+    b.onclick = async (e) => {
       await ensureAudio()
       const g = curPage * NUM_STEPS + s
       if (g >= state.length) return
       const row = grid()[selectedInst]
-      row[g] = (row[g] + 1) % 3
+      // plain click: on/off toggle; shift-click: accent on/off
+      if (e.shiftKey) row[g] = row[g] === 2 ? 1 : 2
+      else row[g] = row[g] ? 0 : 1
       refreshSteps()
       h.patternChanged()
     }

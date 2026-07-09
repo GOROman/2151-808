@@ -135,10 +135,10 @@ export function defaultPatches(): Patch[] {
       name: 'Snare Drum', short: 'SD', color: 'red', ch: 1,
       alg: 4, fb: 7, note: 54, accentBoost: 8,
       ops: [
-        op({ mul: 15, tl: 22, ar: 31, d1r: 16, d1l: 15, d2r: 0, rr: 15 }), // M1 noise src (FB7, deep mod)
+        op({ mul: 15, tl: 20, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 15 }), // M1 noise src (FB7, deep mod)
         op({ mul: 1, tl: 78, ar: 31, d1r: 20, d1l: 15, d2r: 0, rr: 15 }), // M2 body mod
-        op({ mul: 11, tl: 8, ar: 31, d1r: 16, d1l: 15, d2r: 0, rr: 13 }), // C1 noise snap
-        op({ mul: 1, tl: 4, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 13 }), // C2 tone ~185Hz
+        op({ mul: 11, tl: 6, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 13 }), // C1 noise "tssh"
+        op({ mul: 1, tl: 5, ar: 31, d1r: 17, d1l: 15, d2r: 0, rr: 13 }), // C2 tone ~185Hz, short
       ],
     },
     {
@@ -187,19 +187,19 @@ export function defaultPatches(): Patch[] {
       name: 'Hand Clap', short: 'CP', color: 'yellow', ch: 6,
       alg: 5, fb: 7, note: 65, retrigMs: [11, 23], accentBoost: 8,
       ops: [
-        op({ mul: 4, tl: 22, ar: 31, d1r: 14, d1l: 15, d2r: 0, rr: 15, dt2: 3 }), // M1 noise src (FB7)
+        op({ mul: 4, tl: 18, ar: 31, d1r: 14, d1l: 15, d2r: 0, rr: 15, dt2: 3 }), // M1 noise src (FB7)
         op({ mul: 2, tl: 8, ar: 31, d1r: 17, d1l: 15, d2r: 0, rr: 13, dt2: 1 }),
         op({ mul: 3, tl: 8, ar: 31, d1r: 17, d1l: 15, d2r: 0, rr: 13, dt2: 3 }),
-        op({ mul: 4, tl: 10, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 13, dt2: 2 }), // longer tail
+        op({ mul: 4, tl: 8, ar: 31, d1r: 12, d1l: 15, d2r: 0, rr: 13, dt2: 2 }), // ~360ms tail
       ],
     },
     {
       name: 'Open Hat', short: 'OH', color: 'white', ch: 7,
-      alg: 7, fb: 6, note: 91, noiseFreq: 26, gateMs: 600,
+      alg: 7, fb: 6, note: 91, noiseFreq: 26, gateMs: 500,
       ops: [
-        op({ mul: 11, tl: 20, ar: 31, d1r: 14, d1l: 15, d2r: 0, rr: 10, dt2: 2 }), // metallic partials
-        op({ mul: 7, tl: 22, ar: 31, d1r: 14, d1l: 15, d2r: 0, rr: 10, dt2: 3 }),
-        op({ mul: 13, tl: 24, ar: 31, d1r: 14, d1l: 15, d2r: 0, rr: 10, dt2: 1 }),
+        op({ mul: 11, tl: 24, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 10, dt2: 2 }), // metallic partials (quieter — noise leads)
+        op({ mul: 7, tl: 26, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 10, dt2: 3 }),
+        op({ mul: 13, tl: 28, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 10, dt2: 1 }),
         op({ mul: 15, tl: 0, ar: 31, d1r: 13, d1l: 15, d2r: 0, rr: 10 }), // C2 = noise slot
       ],
     },
@@ -207,10 +207,10 @@ export function defaultPatches(): Patch[] {
       name: 'Closed Hat', short: 'CH', color: 'white', ch: 7,
       alg: 7, fb: 6, note: 91, noiseFreq: 26, accentBoost: 8,
       ops: [
-        op({ mul: 11, tl: 24, ar: 31, d1r: 22, d1l: 15, d2r: 0, rr: 15, dt2: 2 }),
-        op({ mul: 7, tl: 26, ar: 31, d1r: 22, d1l: 15, d2r: 0, rr: 15, dt2: 3 }),
-        op({ mul: 13, tl: 28, ar: 31, d1r: 22, d1l: 15, d2r: 0, rr: 15, dt2: 1 }),
-        op({ mul: 15, tl: 0, ar: 31, d1r: 20, d1l: 15, d2r: 0, rr: 15 }),
+        op({ mul: 11, tl: 28, ar: 31, d1r: 23, d1l: 15, d2r: 0, rr: 15, dt2: 2 }),
+        op({ mul: 7, tl: 30, ar: 31, d1r: 23, d1l: 15, d2r: 0, rr: 15, dt2: 3 }),
+        op({ mul: 13, tl: 32, ar: 31, d1r: 23, d1l: 15, d2r: 0, rr: 15, dt2: 1 }),
+        op({ mul: 15, tl: 0, ar: 31, d1r: 21, d1l: 15, d2r: 0, rr: 15 }), // ~80ms tick
       ],
     },
   ]
