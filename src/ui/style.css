@@ -112,7 +112,16 @@ input[type="range"] { accent-color: var(--red); width: 110px; }
   gap: 6px;
   padding: 12px 0;
 }
+.mixerbar { display: flex; justify-content: flex-end; padding: 8px 0 0; }
 .instcol { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.instcol .knobs {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+.instruments.open .knobs { display: flex; }
 .instcol .minilabel {
   font-size: 7px;
   letter-spacing: .1em;

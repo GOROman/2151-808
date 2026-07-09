@@ -270,10 +270,23 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
   panel.appendChild(transport)
 
   // ---- instrument selector (with per-voice PAN/LEVEL/TONE/DECAY, 808 style) ----
+  // knobs are hidden by default; the MIXER ▼ toggle reveals them all at once
+  const mixerBar = el('div', 'mixerbar')
+  const mixerToggle = el('button', 'btn small', 'MIXER ▼') as HTMLButtonElement
+  mixerBar.appendChild(mixerToggle)
+  panel.appendChild(mixerBar)
+
   const instRow = el('div', 'instruments')
+  mixerToggle.onclick = () => {
+    const open = instRow.classList.toggle('open')
+    mixerToggle.textContent = open ? 'MIXER ▲' : 'MIXER ▼'
+    mixerToggle.classList.toggle('active', open)
+  }
+
   const instBtns: HTMLButtonElement[] = []
   state.patches.forEach((p, i) => {
     const col = el('div', 'instcol')
+    const knobBox = el('div', 'knobs')
 
     const knob = (
       name: string,
@@ -299,7 +312,7 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
         await ensureAudio()
         h.preview(i, false)
       }
-      col.append(label, r)
+      knobBox.append(label, r)
     }
 
     knob('PAN', -100, 100, () => Math.round((p.pan ?? 0) * 100), (v) => (p.pan = v / 100), (v) =>
@@ -320,7 +333,7 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
       mdxAssign.textContent = `ASSIGN → ${p.short}`
     }
     instBtns.push(b)
-    col.append(b)
+    col.append(knobBox, b)
     instRow.appendChild(col)
   })
   instBtns[0].classList.add('active')
