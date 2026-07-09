@@ -28,8 +28,16 @@ class AudioEngine {
     const ctx = new AudioContext({ latencyHint: 'interactive' })
     this.ctx = ctx
     const base = import.meta.env.BASE_URL
-    await ctx.audioWorklet.addModule(base + 'worklet.js')
-    const wasmBytes = await (await fetch(base + 'ymfm.wasm')).arrayBuffer()
+    let wasmBytes: ArrayBuffer
+    try {
+      await ctx.audioWorklet.addModule(base + 'worklet.js')
+      wasmBytes = await (await fetch(base + 'ymfm.wasm')).arrayBuffer()
+    } catch (err) {
+      // network hiccup — undo so the next user gesture can retry
+      this.ctx = null
+      void ctx.close().catch(() => {})
+      throw err
+    }
     const node = new AudioWorkletNode(ctx, 'opm-processor', {
       numberOfInputs: 0,
       numberOfOutputs: 1,
@@ -56,7 +64,7 @@ class AudioEngine {
   }
 
   send(msg: ToWorklet): void {
-    if (msg.type === 'play' || msg.type === 'preview') this.resume()
+    if (msg.type === 'play' || msg.type === 'resume' || msg.type === 'preview') this.resume()
     if (!this.node || !this.ready) {
       this.queue.push(msg)
       return
@@ -65,24 +73,25 @@ class AudioEngine {
   }
 }
 
-function initialState(): AppState {
-  const fromUrl = stateFromHash(location.hash)
+async function initialState(): Promise<AppState> {
+  const fromUrl = await stateFromHash(location.hash)
   if (fromUrl) return fromUrl
   const local = loadLocal()
   if (local) return local
   return {
-    version: 4,
+    version: 5,
     tempo: 126,
     swing: 0,
     mode: 'A',
+    length: 16,
     patterns: { a: demoGrid(), b: emptyGrid() },
     patches: defaultPatches(),
     filter: defaultFilter(),
   }
 }
 
-function main(): void {
-  const state = initialState()
+async function main(): Promise<void> {
+  const state = await initialState()
   const engine = new AudioEngine()
 
   const syncAll = (): void => {
@@ -90,6 +99,7 @@ function main(): void {
     engine.send({ type: 'tempo', bpm: state.tempo })
     engine.send({ type: 'swing', amount: state.swing })
     engine.send({ type: 'mode', value: state.mode })
+    engine.send({ type: 'length', steps: state.length })
     engine.send({ type: 'triggers', specs: state.patches.map((p: Patch) => compilePatch(p)) })
     engine.send({ type: 'filter', params: { ...state.filter } })
   }
@@ -107,6 +117,12 @@ function main(): void {
     },
     play: () => engine.send({ type: 'play' }),
     stop: () => engine.send({ type: 'stop' }),
+    pause: () => engine.send({ type: 'pause' }),
+    resume: () => engine.send({ type: 'resume' }),
+    lengthChanged: () => {
+      engine.send({ type: 'length', steps: state.length })
+      persist()
+    },
     patternChanged: () => {
       engine.send({ type: 'pattern', a: state.patterns.a, b: state.patterns.b })
       persist()
@@ -136,10 +152,11 @@ function main(): void {
   })
 
   engine.onMessage = (m) => {
-    if (m.type === 'pos') ui.onPos(m.step, m.pattern)
+    if (m.type === 'pos') ui.onPos(m.step, m.pattern, m.fired)
     if (m.type === 'stopped') ui.onStopped()
     if (m.type === 'level') ui.onLevel(m.peak)
+    if (m.type === 'regs') ui.onRegs(m.regs)
   }
 }
 
-main()
+void main()

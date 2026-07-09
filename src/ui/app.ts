@@ -9,10 +9,13 @@ export interface UIHandlers {
   ensureAudio: () => Promise<void>
   play: () => void
   stop: () => void
+  pause: () => void
+  resume: () => void
   patternChanged: () => void
   tempoChanged: () => void
   swingChanged: () => void
   modeChanged: () => void
+  lengthChanged: () => void
   fill: () => void
   patchChanged: () => void
   preview: (inst: number, accent: boolean) => void
@@ -20,9 +23,10 @@ export interface UIHandlers {
 }
 
 export interface UIController {
-  onPos: (step: number, pattern: 'A' | 'B') => void
+  onPos: (step: number, pattern: 'A' | 'B', fired: number[]) => void
   onStopped: () => void
   onLevel: (peak: number) => void
+  onRegs: (regs: Uint8Array) => void
 }
 
 const STEP_COLORS = ['red', 'red', 'red', 'red', 'orange', 'orange', 'orange', 'orange',
@@ -30,8 +34,10 @@ const STEP_COLORS = ['red', 'red', 'red', 'red', 'orange', 'orange', 'orange', '
 
 export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UIController {
   let playing = false
+  let paused = false
   let editPattern: 'a' | 'b' = 'a'
   let selectedInst = 0
+  let curPage = 0
   let audioStarted = false
 
   const ensureAudio = async (): Promise<void> => {
@@ -40,6 +46,7 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
     try {
       await h.ensureAudio()
     } catch (err) {
+      audioStarted = false // e.g. transient network failure — retry on next gesture
       console.error('[2151-808] audio init failed (insecure context?)', err)
     }
   }
@@ -63,11 +70,41 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
   startBtn.onclick = async () => {
     await ensureAudio()
     playing = !playing
+    paused = false
     if (playing) h.play()
     else h.stop()
     startBtn.classList.toggle('active', playing)
   }
   transport.appendChild(labeled('main', startBtn))
+
+  // keyboard: SPACE = play/pause toggle, ENTER = restart from step 1
+  document.addEventListener('keydown', (e) => {
+    const t = e.target as HTMLElement | null
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return
+    if (e.code !== 'Space' && e.code !== 'Enter') return
+    e.preventDefault() // keep focused buttons from also activating
+    void ensureAudio().then(() => {
+      if (e.code === 'Space') {
+        if (playing) {
+          h.pause()
+          playing = false
+          paused = true
+        } else if (paused) {
+          h.resume()
+          playing = true
+          paused = false
+        } else {
+          h.play()
+          playing = true
+        }
+      } else {
+        h.play()
+        playing = true
+        paused = false
+      }
+      startBtn.classList.toggle('active', playing)
+    })
+  })
 
   const tempoWrap = el('div', 'knobwrap')
   const tempoVal = el('div', 'knobval', String(state.tempo))
@@ -98,6 +135,22 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
   }
   swingWrap.append(swingVal, swing)
   transport.appendChild(labeled('swing', swingWrap))
+
+  const lenWrap = el('div', 'knobwrap')
+  const lenVal = el('div', 'knobval', String(state.length))
+  const len = document.createElement('input')
+  len.type = 'range'
+  len.min = '16'
+  len.max = '64'
+  len.value = String(state.length)
+  len.oninput = () => {
+    state.length = Number(len.value)
+    lenVal.textContent = len.value
+    h.lengthChanged()
+    refreshPages()
+  }
+  lenWrap.append(lenVal, len)
+  transport.appendChild(labeled('length', lenWrap))
 
   // ---- master filter ----
   const filtModes = el('div', 'modes')
@@ -199,8 +252,9 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
   const shareBtn = el('button', 'btn small', 'SHARE') as HTMLButtonElement
   const shareMsg = el('span', 'sharemsg', '')
   shareBtn.onclick = async () => {
-    const url = location.origin + location.pathname + stateToHash(state)
-    history.replaceState(null, '', stateToHash(state))
+    const hash = await stateToHash(state)
+    const url = location.origin + location.pathname + hash
+    history.replaceState(null, '', hash)
     try {
       await navigator.clipboard.writeText(url)
       shareMsg.textContent = 'URL copied!'
@@ -235,6 +289,32 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
   instBtns[0].classList.add('active')
   panel.appendChild(instRow)
 
+  // ---- step page selector ----
+  const pagesWrap = el('div', 'pages')
+  pagesWrap.appendChild(el('span', 'pagelabel', 'STEP PAGE'))
+  const pageBtns: HTMLButtonElement[] = []
+  for (let pg = 0; pg < 4; pg++) {
+    const b = el('button', 'btn small', `${pg * 16 + 1}-${pg * 16 + 16}`) as HTMLButtonElement
+    b.onclick = () => {
+      curPage = pg
+      refreshPages()
+    }
+    pageBtns.push(b)
+    pagesWrap.appendChild(b)
+  }
+  panel.appendChild(pagesWrap)
+
+  function refreshPages(): void {
+    const pageCount = Math.ceil(state.length / NUM_STEPS)
+    if (curPage >= pageCount) curPage = pageCount - 1
+    pagesWrap.style.display = pageCount > 1 ? '' : 'none'
+    pageBtns.forEach((b, i) => {
+      b.style.display = i < pageCount ? '' : 'none'
+      b.classList.toggle('active', i === curPage)
+    })
+    refreshSteps()
+  }
+
   // ---- step row ----
   const stepRow = el('div', 'steps')
   const stepBtns: HTMLButtonElement[] = []
@@ -245,8 +325,10 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
     const b = el('button', `step ${STEP_COLORS[s]}`, String(s + 1)) as HTMLButtonElement
     b.onclick = async () => {
       await ensureAudio()
+      const g = curPage * NUM_STEPS + s
+      if (g >= state.length) return
       const row = grid()[selectedInst]
-      row[s] = (row[s] + 1) % 3
+      row[g] = (row[g] + 1) % 3
       refreshSteps()
       h.patternChanged()
     }
@@ -319,6 +401,15 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
   mdxRow.append(mdxLoad, mdxSelect, mdxAssign, mdxTitle, mdxInput)
   panel.appendChild(mdxRow)
 
+  // ---- YM2151 register viewer ----
+  const regBox = document.createElement('details')
+  regBox.className = 'regview'
+  const regSummary = document.createElement('summary')
+  regSummary.textContent = 'YM2151 REGISTERS'
+  const regPre = document.createElement('pre')
+  regBox.append(regSummary, regPre)
+  panel.appendChild(regBox)
+
   const footer = el('div', 'footer',
     'YM2151 (OPM) emulation by <a href="https://github.com/aaronsgiles/ymfm" target="_blank" rel="noreferrer">ymfm</a>' +
     ' — <a href="https://github.com/GOROman/2151-808" target="_blank" rel="noreferrer">source</a>')
@@ -330,20 +421,37 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
 
   function refreshSteps(): void {
     const row = grid()[selectedInst]
-    stepBtns.forEach((_b, s) => {
-      leds[s].classList.toggle('set', row[s] >= 1)
-      leds[s].classList.toggle('accent', row[s] === 2)
+    stepBtns.forEach((b, s) => {
+      const g = curPage * NUM_STEPS + s
+      const inRange = g < state.length
+      b.textContent = String(g + 1)
+      b.disabled = !inRange
+      b.classList.toggle('off', !inRange)
+      leds[s].classList.toggle('set', inRange && row[g] >= 1)
+      leds[s].classList.toggle('accent', inRange && row[g] === 2)
     })
   }
-  refreshSteps()
+  refreshPages()
+
+  const flashTimers: number[] = []
+  function flashInst(i: number): void {
+    instBtns[i].classList.add('hit')
+    clearTimeout(flashTimers[i])
+    flashTimers[i] = window.setTimeout(() => instBtns[i].classList.remove('hit'), 130)
+  }
 
   let lastLedStep = -1
   return {
-    onPos(step, pattern) {
+    onPos(step, pattern, fired) {
       if (lastLedStep >= 0) leds[lastLedStep].classList.remove('lit')
-      leds[step].classList.add('lit')
-      lastLedStep = step
+      lastLedStep = -1
+      const local = step - curPage * NUM_STEPS
+      if (local >= 0 && local < NUM_STEPS) {
+        leds[local].classList.add('lit')
+        lastLedStep = local
+      }
       startBtn.dataset.pattern = pattern
+      for (const i of fired) flashInst(i)
     },
     onStopped() {
       if (lastLedStep >= 0) leds[lastLedStep].classList.remove('lit')
@@ -352,6 +460,20 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
     onLevel(peak) {
       const n = Math.min(8, Math.round(peak * 10))
       Array.from(vu.children).forEach((c, i) => c.classList.toggle('lit', i < n))
+    },
+    onRegs(regs) {
+      if (!regBox.open) return
+      const hex = (v: number): string => v.toString(16).toUpperCase().padStart(2, '0')
+      let s = '    ' + Array.from({ length: 16 }, (_, i) => hex(i)).join(' ') + '\n'
+      for (let row = 0; row < 16; row++) {
+        s += hex(row * 16) + ': '
+        for (let col = 0; col < 16; col++) {
+          const v = regs[row * 16 + col]
+          s += (v ? hex(v) : '··') + ' '
+        }
+        s += '\n'
+      }
+      regPre.textContent = s
     },
   }
 }

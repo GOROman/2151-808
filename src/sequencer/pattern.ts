@@ -1,11 +1,13 @@
-import { NUM_INSTRUMENTS, NUM_STEPS, type FilterParams, type StepGrid } from '../audio/messages'
+import { MAX_STEPS, NUM_INSTRUMENTS, type FilterParams, type StepGrid } from '../audio/messages'
 import type { Patch } from '../synth/patches'
 
 export interface AppState {
-  version: 4
+  version: 5
   tempo: number
   swing: number
   mode: 'A' | 'B' | 'AB'
+  /** sequence length in steps (16-64); grids always hold MAX_STEPS columns */
+  length: number
   patterns: { a: StepGrid; b: StepGrid }
   patches: Patch[]
   filter: FilterParams
@@ -16,7 +18,16 @@ export function defaultFilter(): FilterParams {
 }
 
 export function emptyGrid(): StepGrid {
-  return Array.from({ length: NUM_INSTRUMENTS }, () => Array(NUM_STEPS).fill(0))
+  return Array.from({ length: NUM_INSTRUMENTS }, () => Array(MAX_STEPS).fill(0))
+}
+
+/** Widen old 16-step rows to MAX_STEPS columns. */
+export function padGrid(g: StepGrid): StepGrid {
+  return g.map((row) => {
+    const r = row.slice(0, MAX_STEPS)
+    while (r.length < MAX_STEPS) r.push(0)
+    return r
+  })
 }
 
 /** A little four-on-the-floor demo pattern so first play makes sound. */

@@ -32,7 +32,10 @@ export interface FilterParams {
   res: number
 }
 
+/** steps shown per page (one row of buttons) */
 export const NUM_STEPS = 16
+/** maximum sequence length */
+export const MAX_STEPS = 64
 export const NUM_INSTRUMENTS = 9
 
 /** step value: 0 = off, 1 = on, 2 = accent */
@@ -47,12 +50,16 @@ export type ToWorklet =
   | { type: 'fill' }
   | { type: 'play' }
   | { type: 'stop' }
+  | { type: 'pause' }
+  | { type: 'resume' }
   | { type: 'triggers'; specs: TriggerSpec[] }
   | { type: 'preview'; inst: number; accent: boolean }
   | { type: 'filter'; params: FilterParams }
+  | { type: 'length'; steps: number }
 
 export type FromWorklet =
   | { type: 'ready' }
-  | { type: 'pos'; step: number; pattern: 'A' | 'B' }
+  | { type: 'pos'; step: number; pattern: 'A' | 'B'; fired: number[] }
   | { type: 'stopped' }
   | { type: 'level'; peak: number }
+  | { type: 'regs'; regs: Uint8Array }

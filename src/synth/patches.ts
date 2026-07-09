@@ -121,13 +121,14 @@ export function compilePatch(p: Patch): TriggerSpec {
 export function defaultPatches(): Patch[] {
   return [
     {
+      // Voice @1 from ds02.mdx (Dragon Spirit, MXDRV)
       name: 'Bass Drum', short: 'BD', color: 'red', ch: 0,
-      alg: 4, fb: 4, note: 57, sweep: { toNote: 33, ms: 40 }, accentBoost: 8,
+      alg: 3, fb: 7, note: 45, accentBoost: 8,
       ops: [
-        op({ mul: 1, tl: 36, ar: 31, d1r: 17, d1l: 15, d2r: 0, rr: 15 }), // M1 attack click
-        op({ tl: 127 }), // M2 unused
-        op({ mul: 1, tl: 0, ar: 31, d1r: 13, d1l: 15, d2r: 0, rr: 12 }), // C1 body ~55Hz
-        op({ tl: 127 }), // C2 unused
+        op({ mul: 11, tl: 0, ks: 1, ar: 31, d1r: 4, d1l: 0, d2r: 0, rr: 1, dt2: 1 }),
+        op({ mul: 0, tl: 0, ks: 1, ar: 31, d1r: 26, d1l: 15, d2r: 0, rr: 15 }),
+        op({ mul: 1, tl: 26, ks: 1, ar: 31, d1r: 21, d1l: 6, d2r: 4, rr: 1, dt1: 3 }),
+        op({ mul: 0, tl: 0, ks: 1, ar: 31, d1r: 12, d1l: 15, d2r: 0, rr: 7 }), // C2 carrier ~55Hz
       ],
     },
     {
@@ -171,13 +172,15 @@ export function defaultPatches(): Patch[] {
       ],
     },
     {
+      // 808-style: two detuned "square-ish" tones (~556/834Hz, the 808's
+      // 540/800Hz pair) with a short clonk decay (~210ms)
       name: 'Cowbell', short: 'CB', color: 'yellow', ch: 5,
-      alg: 4, fb: 5, note: 60.5, gateMs: 350,
+      alg: 4, fb: 4, note: 60.5, accentBoost: 8,
       ops: [
-        op({ mul: 7, tl: 52, ar: 31, d1r: 20, d1l: 15, d2r: 0, rr: 15 }), // M1 clang
-        op({ mul: 7, tl: 58, ar: 31, d1r: 20, d1l: 15, d2r: 0, rr: 15, dt2: 1 }),
-        op({ mul: 2, tl: 10, ar: 31, d1r: 14, d1l: 3, d2r: 12, rr: 13 }), // C1 ~540Hz
-        op({ mul: 3, tl: 12, ar: 31, d1r: 14, d1l: 3, d2r: 12, rr: 13 }), // C2 ~810Hz
+        op({ mul: 2, tl: 42, ar: 31, d1r: 20, d1l: 15, d2r: 0, rr: 15 }), // M1 1:1 bite
+        op({ mul: 3, tl: 44, ar: 31, d1r: 20, d1l: 15, d2r: 0, rr: 15 }), // M2 1:1 bite
+        op({ mul: 2, tl: 8, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 13 }), // C1 ~556Hz
+        op({ mul: 3, tl: 12, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 13 }), // C2 ~834Hz
       ],
     },
     {

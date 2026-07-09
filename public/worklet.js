@@ -5,7 +5,7 @@
 // Plain JS on purpose: worklet modules can't share the Vite bundle.
 // Message types mirror src/audio/messages.ts.
 
-const NUM_STEPS = 16
+const MAX_STEPS = 64
 
 class OpmProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -29,6 +29,7 @@ class OpmProcessor extends AudioWorkletProcessor {
     this.step = 0
     this.bpm = 120
     this.swing = 0
+    this.length = 16 // sequence length in steps (16-64)
     this.mode = 'A' // 'A' | 'B' | 'AB'
     this.fillArmed = false
     this.fillReturn = null
@@ -44,6 +45,8 @@ class OpmProcessor extends AudioWorkletProcessor {
     this.fA3 = 0
     this.fK = 2
     this.fS = [0, 0, 0, 0] // integrator states: [ic1L, ic2L, ic1R, ic2R]
+
+    this.regs = new Uint8Array(256) // shadow of last written register values
 
     this.peak = 0
     this.peakCountdown = 0
@@ -78,6 +81,10 @@ class OpmProcessor extends AudioWorkletProcessor {
       case 'swing':
         this.swing = msg.amount
         break
+      case 'length':
+        this.length = Math.max(1, Math.min(MAX_STEPS, msg.steps))
+        if (this.step >= this.length) this.step = 0
+        break
       case 'mode':
         this.mode = msg.value
         if (this.mode !== 'AB') this.curPattern = this.mode
@@ -96,9 +103,22 @@ class OpmProcessor extends AudioWorkletProcessor {
         break
       case 'stop':
         this.playing = false
+        this.step = 0
         this.events = []
         this.allKeysOff()
         this.port.postMessage({ type: 'stopped' })
+        break
+      case 'pause':
+        this.playing = false // keep this.step for resume
+        this.events = []
+        this.allKeysOff()
+        this.port.postMessage({ type: 'stopped' })
+        break
+      case 'resume':
+        if (!this.playing) {
+          this.nextStepFrame = this.frame
+          this.playing = true
+        }
         break
       case 'preview':
         if (this.wasm) this.fireTrigger(msg.inst, msg.accent ? 2 : 1, this.frame)
@@ -122,6 +142,7 @@ class OpmProcessor extends AudioWorkletProcessor {
   }
 
   write(reg, val) {
+    this.regs[reg & 0xff] = val & 0xff
     this.wasm.opm_write(reg, val)
   }
 
@@ -196,18 +217,22 @@ class OpmProcessor extends AudioWorkletProcessor {
 
   fireStep(atFrame) {
     const grid = this.patterns[this.curPattern]
+    const fired = []
     if (grid) {
       for (let inst = 0; inst < grid.length; inst++) {
         const v = grid[inst][this.step]
-        if (v) this.fireTrigger(inst, v, atFrame)
+        if (v) {
+          this.fireTrigger(inst, v, atFrame)
+          fired.push(inst)
+        }
       }
     }
-    this.port.postMessage({ type: 'pos', step: this.step, pattern: this.curPattern })
+    this.port.postMessage({ type: 'pos', step: this.step, pattern: this.curPattern, fired })
 
     // advance
     const base = this.framesPerStep()
     const cur = this.step
-    this.step = (this.step + 1) % NUM_STEPS
+    this.step = (this.step + 1) % this.length
     if (this.step === 0) {
       // bar boundary: resolve A/B/fill
       if (this.fillArmed) {
@@ -280,6 +305,7 @@ class OpmProcessor extends AudioWorkletProcessor {
     this.peakCountdown -= n
     if (this.peakCountdown <= 0) {
       this.port.postMessage({ type: 'level', peak: this.peak })
+      this.port.postMessage({ type: 'regs', regs: this.regs.slice() })
       this.peak = 0
       this.peakCountdown = sampleRate / 15
     }

@@ -129,6 +129,15 @@ input[type="range"] { accent-color: var(--red); width: 110px; }
 .inst.yellow { border-top-color: var(--yellow); }
 .inst.white { border-top-color: var(--white); }
 .inst.active { outline: 2px solid var(--led); background: linear-gradient(180deg, #4a3a36, #35292a); }
+.inst.hit {
+  box-shadow: 0 0 14px var(--led), 0 0 4px var(--led);
+  border-color: var(--led);
+  transition: box-shadow .03s;
+}
+
+/* step pages */
+.pages { display: flex; gap: 6px; align-items: center; padding: 2px 0 8px; }
+.pagelabel { font-size: 9px; letter-spacing: .15em; color: var(--dim); margin-right: 4px; }
 
 /* steps */
 .steps {
@@ -162,6 +171,7 @@ input[type="range"] { accent-color: var(--red); width: 110px; }
 .step.orange { background: linear-gradient(180deg, #f09040, var(--orange)); }
 .step.yellow { background: linear-gradient(180deg, #f2d24a, var(--yellow)); }
 .step.white { background: linear-gradient(180deg, #fdfbf3, var(--white)); }
+.step.off { filter: grayscale(.8) brightness(.45); cursor: default; }
 
 
 /* editor */
@@ -203,6 +213,28 @@ input[type="range"] { accent-color: var(--red); width: 110px; }
   min-width: 140px;
 }
 .mdxselect:disabled { color: #5a3a34; }
+
+/* register viewer */
+.regview { border-top: 2px solid #3d3d42; }
+.regview summary {
+  cursor: pointer;
+  padding: 10px 4px;
+  font-size: 11px;
+  letter-spacing: .12em;
+  color: var(--silver);
+}
+.regview pre {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  background: #17100e;
+  border-radius: 6px;
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: var(--led);
+  text-shadow: 0 0 4px rgba(255,75,42,.45);
+  overflow-x: auto;
+}
 
 .footer { padding-top: 10px; font-size: 10px; color: var(--dim); text-align: center; }
 .footer a { color: #9ab2d8; }
