@@ -12,7 +12,11 @@ class OpmProcessor extends AudioWorkletProcessor {
     super()
     this.wasm = null
     this.chipRate = 55930
-    this.buf = null // Float32Array view over wasm memory (stereo interleaved)
+    this.buf = null // Float32Array view over wasm memory: 8 channels x stereo per frame
+
+    // mixer: per-chip-channel pan gains (balance style; center = 1/1)
+    this.panL = new Float32Array(8).fill(1)
+    this.panR = new Float32Array(8).fill(1)
 
     // resampler state
     this.ratio = 1
@@ -67,7 +71,7 @@ class OpmProcessor extends AudioWorkletProcessor {
         this.chipRate = this.wasm.opm_init()
         this.ratio = this.chipRate / sampleRate
         const ptr = this.wasm.opm_buffer()
-        this.buf = new Float32Array(this.wasm.memory.buffer, ptr, 2)
+        this.buf = new Float32Array(this.wasm.memory.buffer, ptr, 16)
         this.port.postMessage({ type: 'ready' })
         break
       }
@@ -172,6 +176,11 @@ class OpmProcessor extends AudioWorkletProcessor {
     this.write(0x08, t.ch)
     // drop any queued events for the same channel (stale sweeps/retrigs)
     this.events = this.events.filter((e) => (e.chTag ?? -1) !== t.ch)
+
+    // mixer pan for this chip channel (balance: center 1/1, hard L keeps L only)
+    const pan = t.pan || 0
+    this.panL[t.ch] = Math.min(1, 1 - pan)
+    this.panR[t.ch] = Math.min(1, 1 + pan)
 
     for (const [reg, val] of t.initRegs) this.write(reg, val)
     if (t.noise !== null) this.write(0x0f, t.noise)
@@ -284,10 +293,17 @@ class OpmProcessor extends AudioWorkletProcessor {
         this.wasm.opm_generate(1)
         // memory may have grown/moved; re-view defensively
         if (this.buf.buffer !== this.wasm.memory.buffer) {
-          this.buf = new Float32Array(this.wasm.memory.buffer, this.wasm.opm_buffer(), 2)
+          this.buf = new Float32Array(this.wasm.memory.buffer, this.wasm.opm_buffer(), 16)
         }
-        this.curL = this.buf[0]
-        this.curR = this.buf[1]
+        // mix the 8 chip channels with per-channel pan
+        let ml = 0
+        let mr = 0
+        for (let ch = 0; ch < 8; ch++) {
+          ml += this.buf[ch * 2] * this.panL[ch]
+          mr += this.buf[ch * 2 + 1] * this.panR[ch]
+        }
+        this.curL = ml
+        this.curR = mr
       }
       let l = this.prevL + (this.curL - this.prevL) * this.phase
       let r = this.prevR + (this.curR - this.prevR) * this.phase

@@ -112,6 +112,20 @@ input[type="range"] { accent-color: var(--red); width: 110px; }
   gap: 6px;
   padding: 12px 0;
 }
+.instcol { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.instcol .minilabel {
+  font-size: 7px;
+  letter-spacing: .1em;
+  color: var(--dim);
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+}
+.instcol .mini {
+  width: 85%;
+  height: 10px;
+  margin: 0;
+  accent-color: var(--orange);
+}
+.instcol .inst { width: 100%; margin-top: 4px; }
 .inst {
   background: linear-gradient(180deg, #3c3c42, #2c2c30);
   border: 1px solid #17171a;

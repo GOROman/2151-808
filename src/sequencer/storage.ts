@@ -3,21 +3,22 @@ import { defaultPatches, type Patch } from '../synth/patches'
 
 const KEY = '2151-808-state'
 
-const VERSION = 6
+const VERSION = 7
 
 /** Accept current-version state as-is; upgrade older versions in place.
  *  Voice redesigns are pushed into saved sessions by replacing just the
- *  instruments that changed after the saved version: v6 reworked
- *  SD/CP/OH/CH (808 style), v5 reworked BD (Dragon Spirit @1) and CB and
- *  added sequence length + filter. Pre-v3 default patches were broken, so
- *  those get all patches reset. */
+ *  instruments that changed after the saved version: v7 de-metallized SD,
+ *  v6 reworked SD/CP/OH/CH (808 style), v5 reworked BD (Dragon Spirit @1)
+ *  and CB and added sequence length + filter. Pre-v3 default patches were
+ *  broken, so those get all patches reset. */
 function migrate(s: unknown): AppState | null {
   const st = s as AppState | null
   if (!st || typeof st !== 'object' || typeof st.version !== 'number') return null
   if (st.version === VERSION) return st
   if (st.version < VERSION) {
     const fresh = defaultPatches()
-    const changed = st.version >= 5 ? [1, 6, 7, 8] : [0, 1, 5, 6, 7, 8]
+    const changed =
+      st.version >= 6 ? [1] : st.version >= 5 ? [1, 6, 7, 8] : [0, 1, 5, 6, 7, 8]
     return {
       ...st,
       version: VERSION,

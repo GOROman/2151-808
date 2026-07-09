@@ -21,6 +21,8 @@ export interface TriggerSpec {
   noise: number | null
   /** Key-off after this many ms (0 = leave ringing) */
   gateMs: number
+  /** mixer pan -1 (L) .. 0 (center) .. +1 (R) */
+  pan: number
 }
 
 /** Master output filter settings. */

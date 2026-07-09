@@ -79,7 +79,7 @@ async function initialState(): Promise<AppState> {
   const local = loadLocal()
   if (local) return local
   return {
-    version: 6,
+    version: 7,
     tempo: 126,
     swing: 0,
     mode: 'A',

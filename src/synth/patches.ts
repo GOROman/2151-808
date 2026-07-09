@@ -30,6 +30,15 @@ export interface Patch {
   noiseFreq?: number
   gateMs?: number
   accentBoost?: number
+  /** mixer knobs — non-destructive offsets applied at compile time */
+  /** output level 0-15 (default 15 = full; 6dB per step via carrier TL) */
+  level?: number
+  /** mixer pan -1 (L) .. 0 (center) .. +1 (R), continuous */
+  pan?: number
+  /** tone 0-15 (default 8 = as designed; scales modulator level / noise freq) */
+  tone?: number
+  /** decay 0-15 (default 8 = as designed; scales carrier D1R and gate time) */
+  decay?: number
   ops: [OpParams, OpParams, OpParams, OpParams]
 }
 
@@ -66,25 +75,35 @@ export function noteToKcKf(midi: number): { kc: number; kf: number } {
 /** Compile a patch into the full register list + trigger metadata. */
 export function compilePatch(p: Patch): TriggerSpec {
   const ch = p.ch
+  const carrierIdx = carriers(p.alg)
+  // knobs (non-destructive: applied here, ops stay as designed)
+  const tone = (p.tone ?? 8) - 8 // + = brighter (more modulation)
+  const decay = (p.decay ?? 8) - 8 // + = longer (slower carrier D1R)
+  const level = p.level ?? 15
+  const levelAtt = level === 0 ? 127 : (15 - level) * 3 // 2.25dB per step, 0 = mute
+
   const regs: [number, number][] = []
-  // RL (both speakers) / FB / CONNECT
+  // RL (both speakers — mixer pan happens in the worklet) / FB / CONNECT
   regs.push([0x20 + ch, 0xc0 | (p.fb << 3) | p.alg])
   // PMS/AMS off
   regs.push([0x38 + ch, 0])
   p.ops.forEach((o, i) => {
     const base = i * 8 + ch
+    const isCarrier = carrierIdx.includes(i)
+    const tl = isCarrier ? o.tl : Math.max(0, Math.min(127, o.tl - tone * 4))
+    const d1r = isCarrier ? Math.max(1, Math.min(31, o.d1r - decay)) : o.d1r
     regs.push([0x40 + base, ((o.dt1 & 7) << 4) | (o.mul & 15)])
-    regs.push([0x60 + base, o.tl & 127])
+    regs.push([0x60 + base, tl & 127])
     regs.push([0x80 + base, ((o.ks & 3) << 6) | (o.ar & 31)])
-    regs.push([0xa0 + base, o.d1r & 31])
+    regs.push([0xa0 + base, d1r & 31])
     regs.push([0xc0 + base, ((o.dt2 & 3) << 6) | (o.d2r & 31)])
     regs.push([0xe0 + base, ((o.d1l & 15) << 4) | (o.rr & 15)])
   })
 
   const { kc, kf } = noteToKcKf(p.note)
-  const carrierTL = carriers(p.alg).map((i) => ({
+  const carrierTL = carrierIdx.map((i) => ({
     reg: 0x60 + i * 8 + ch,
-    base: p.ops[i].tl,
+    base: Math.min(127, p.ops[i].tl + levelAtt),
   }))
 
   const sweep: { ms: number; kc: number; kf: number }[] = []
@@ -98,6 +117,8 @@ export function compilePatch(p: Patch): TriggerSpec {
     }
   }
 
+  const nfrq =
+    p.noiseFreq !== undefined ? Math.max(0, Math.min(31, p.noiseFreq + tone)) : undefined
   return {
     ch,
     initRegs: regs,
@@ -107,8 +128,9 @@ export function compilePatch(p: Patch): TriggerSpec {
     accentBoost: p.accentBoost ?? 12,
     sweep,
     retrigMs: p.retrigMs ?? [],
-    noise: p.noiseFreq !== undefined ? 0x80 | (p.noiseFreq & 31) : ch === 7 ? 0 : null,
-    gateMs: p.gateMs ?? 0,
+    noise: nfrq !== undefined ? 0x80 | nfrq : ch === 7 ? 0 : null,
+    gateMs: (p.gateMs ?? 0) * (((p.decay ?? 8) + 1) / 9),
+    pan: Math.max(-1, Math.min(1, p.pan ?? 0)),
   }
 }
 
@@ -132,12 +154,14 @@ export function defaultPatches(): Patch[] {
       ],
     },
     {
+      // detuned deep-FM stack (DT1/DT2 break the harmonic grid) reads as
+      // broadband noise (autocorr 0.12) instead of a metallic clank
       name: 'Snare Drum', short: 'SD', color: 'red', ch: 1,
       alg: 4, fb: 7, note: 54, accentBoost: 8,
       ops: [
-        op({ mul: 15, tl: 20, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 15 }), // M1 noise src (FB7, deep mod)
+        op({ mul: 15, tl: 10, dt1: 2, dt2: 3, ar: 31, d1r: 14, d1l: 15, d2r: 0, rr: 15 }), // M1 noise src (FB7, very deep)
         op({ mul: 1, tl: 78, ar: 31, d1r: 20, d1l: 15, d2r: 0, rr: 15 }), // M2 body mod
-        op({ mul: 11, tl: 6, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 13 }), // C1 noise "tssh"
+        op({ mul: 9, tl: 8, dt1: 7, dt2: 3, ar: 31, d1r: 15, d1l: 15, d2r: 0, rr: 13 }), // C1 noise "tssh"
         op({ mul: 1, tl: 5, ar: 31, d1r: 17, d1l: 15, d2r: 0, rr: 13 }), // C2 tone ~185Hz, short
       ],
     },

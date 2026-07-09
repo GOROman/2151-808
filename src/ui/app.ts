@@ -269,10 +269,46 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
 
   panel.appendChild(transport)
 
-  // ---- instrument selector ----
+  // ---- instrument selector (with per-voice PAN/LEVEL/TONE/DECAY, 808 style) ----
   const instRow = el('div', 'instruments')
   const instBtns: HTMLButtonElement[] = []
   state.patches.forEach((p, i) => {
+    const col = el('div', 'instcol')
+
+    const knob = (
+      name: string,
+      min: number,
+      max: number,
+      get: () => number,
+      set: (v: number) => void,
+      show: (v: number) => string,
+    ): void => {
+      const label = el('span', 'minilabel', `${name} ${show(get())}`)
+      const r = document.createElement('input')
+      r.type = 'range'
+      r.min = String(min)
+      r.max = String(max)
+      r.className = 'mini'
+      r.value = String(get())
+      r.oninput = () => {
+        set(Number(r.value))
+        label.textContent = `${name} ${show(Number(r.value))}`
+        h.patchChanged()
+      }
+      r.onchange = async () => {
+        await ensureAudio()
+        h.preview(i, false)
+      }
+      col.append(label, r)
+    }
+
+    knob('PAN', -100, 100, () => Math.round((p.pan ?? 0) * 100), (v) => (p.pan = v / 100), (v) =>
+      v === 0 ? 'C' : v < 0 ? 'L' + -v : 'R' + v,
+    )
+    knob('LEVEL', 0, 15, () => p.level ?? 15, (v) => (p.level = v), String)
+    knob('TONE', 0, 15, () => p.tone ?? 8, (v) => (p.tone = v), String)
+    knob('DECAY', 0, 15, () => p.decay ?? 8, (v) => (p.decay = v), String)
+
     const b = el('button', `inst ${p.color}`, `<b>${p.short}</b><span>${p.name}</span>`) as HTMLButtonElement
     b.onclick = async () => {
       await ensureAudio()
@@ -284,7 +320,8 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
       mdxAssign.textContent = `ASSIGN → ${p.short}`
     }
     instBtns.push(b)
-    instRow.appendChild(b)
+    col.append(b)
+    instRow.appendChild(col)
   })
   instBtns[0].classList.add('active')
   panel.appendChild(instRow)
