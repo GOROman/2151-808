@@ -184,6 +184,26 @@ input[type="range"] { accent-color: var(--red); width: 110px; }
 .param label b { color: var(--text); margin-left: 3px; }
 .param input[type="range"] { width: 72px; }
 
+/* MDX voice import */
+.mdxrow {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  border-top: 2px solid #3d3d42;
+  padding: 10px 4px;
+}
+.mdxlabel { font-size: 11px; letter-spacing: .12em; color: var(--silver); }
+.mdxtitle { font-size: 10px; color: var(--dim); }
+.mdxselect {
+  background: #1a0f0d;
+  color: var(--led);
+  border: 1px solid #17171a;
+  border-radius: 3px;
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  font-size: 12px;
+  padding: 4px 6px;
+  min-width: 140px;
+}
+.mdxselect:disabled { color: #5a3a34; }
+
 .footer { padding-top: 10px; font-size: 10px; color: var(--dim); text-align: center; }
 .footer a { color: #9ab2d8; }
 

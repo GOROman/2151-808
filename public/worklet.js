@@ -37,6 +37,14 @@ class OpmProcessor extends AudioWorkletProcessor {
     this.triggers = []
     this.events = [] // pending register writes: {frame, reg, val} (kept sorted)
 
+    // master filter (TPT state-variable filter)
+    this.filterMode = 'off' // 'off' | 'lp' | 'hp'
+    this.fA1 = 0
+    this.fA2 = 0
+    this.fA3 = 0
+    this.fK = 2
+    this.fS = [0, 0, 0, 0] // integrator states: [ic1L, ic2L, ic1R, ic2R]
+
     this.peak = 0
     this.peakCountdown = 0
 
@@ -95,6 +103,21 @@ class OpmProcessor extends AudioWorkletProcessor {
       case 'preview':
         if (this.wasm) this.fireTrigger(msg.inst, msg.accent ? 2 : 1, this.frame)
         break
+      case 'filter': {
+        const p = msg.params
+        const fc = Math.max(20, Math.min(p.cutoff, sampleRate * 0.45))
+        const g = Math.tan((Math.PI * fc) / sampleRate)
+        const k = 2 - 1.95 * Math.max(0, Math.min(1, p.res))
+        this.fA1 = 1 / (1 + g * (g + k))
+        this.fA2 = g * this.fA1
+        this.fA3 = g * this.fA2
+        this.fK = k
+        if (this.filterMode === 'off' && p.mode !== 'off') {
+          this.fS[0] = this.fS[1] = this.fS[2] = this.fS[3] = 0
+        }
+        this.filterMode = p.mode
+        break
+      }
     }
   }
 
@@ -152,6 +175,19 @@ class OpmProcessor extends AudioWorkletProcessor {
       this.pushEvent(f + 1, 0x08, 0x78 | t.ch, t.ch) // on again, one frame later
     }
     if (t.gateMs > 0) this.pushEvent(atFrame + this.msToFrames(t.gateMs), 0x08, t.ch, t.ch)
+  }
+
+  // One channel of the TPT SVF; o = state offset (0 = L, 2 = R).
+  // tanh keeps resonance peaks from clipping harshly.
+  filterSample(x, o) {
+    const s = this.fS
+    const v3 = x - s[o + 1]
+    const v1 = this.fA1 * s[o] + this.fA2 * v3
+    const v2 = s[o + 1] + this.fA2 * s[o] + this.fA3 * v3
+    s[o] = 2 * v1 - s[o]
+    s[o + 1] = 2 * v2 - s[o + 1]
+    const y = this.filterMode === 'lp' ? v2 : x - this.fK * v1 - v2
+    return Math.tanh(y)
   }
 
   framesPerStep() {
@@ -228,8 +264,12 @@ class OpmProcessor extends AudioWorkletProcessor {
         this.curL = this.buf[0]
         this.curR = this.buf[1]
       }
-      const l = this.prevL + (this.curL - this.prevL) * this.phase
-      const r = this.prevR + (this.curR - this.prevR) * this.phase
+      let l = this.prevL + (this.curL - this.prevL) * this.phase
+      let r = this.prevR + (this.curR - this.prevR) * this.phase
+      if (this.filterMode !== 'off') {
+        l = this.filterSample(l, 0)
+        r = this.filterSample(r, 2)
+      }
       outL[i] = l
       outR[i] = r
       const a = Math.max(Math.abs(l), Math.abs(r))

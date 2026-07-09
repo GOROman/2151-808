@@ -1,7 +1,7 @@
 import './ui/style.css'
 import type { FromWorklet, ToWorklet } from './audio/messages'
 import { compilePatch, type Patch } from './synth/patches'
-import { demoGrid, emptyGrid, type AppState } from './sequencer/pattern'
+import { defaultFilter, demoGrid, emptyGrid, type AppState } from './sequencer/pattern'
 import { defaultPatches } from './synth/patches'
 import { loadLocal, saveLocal, stateFromHash } from './sequencer/storage'
 import { buildUI } from './ui/app'
@@ -71,12 +71,13 @@ function initialState(): AppState {
   const local = loadLocal()
   if (local) return local
   return {
-    version: 3,
+    version: 4,
     tempo: 126,
     swing: 0,
     mode: 'A',
     patterns: { a: demoGrid(), b: emptyGrid() },
     patches: defaultPatches(),
+    filter: defaultFilter(),
   }
 }
 
@@ -90,6 +91,7 @@ function main(): void {
     engine.send({ type: 'swing', amount: state.swing })
     engine.send({ type: 'mode', value: state.mode })
     engine.send({ type: 'triggers', specs: state.patches.map((p: Patch) => compilePatch(p)) })
+    engine.send({ type: 'filter', params: { ...state.filter } })
   }
 
   let saveTimer: number | undefined
@@ -127,6 +129,10 @@ function main(): void {
       persist()
     },
     preview: (inst: number, accent: boolean) => engine.send({ type: 'preview', inst, accent }),
+    filterChanged: () => {
+      engine.send({ type: 'filter', params: { ...state.filter } })
+      persist()
+    },
   })
 
   engine.onMessage = (m) => {

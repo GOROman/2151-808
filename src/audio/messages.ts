@@ -23,6 +23,15 @@ export interface TriggerSpec {
   gateMs: number
 }
 
+/** Master output filter settings. */
+export interface FilterParams {
+  mode: 'off' | 'lp' | 'hp'
+  /** cutoff frequency in Hz */
+  cutoff: number
+  /** resonance 0-1 */
+  res: number
+}
+
 export const NUM_STEPS = 16
 export const NUM_INSTRUMENTS = 9
 
@@ -40,6 +49,7 @@ export type ToWorklet =
   | { type: 'stop' }
   | { type: 'triggers'; specs: TriggerSpec[] }
   | { type: 'preview'; inst: number; accent: boolean }
+  | { type: 'filter'; params: FilterParams }
 
 export type FromWorklet =
   | { type: 'ready' }

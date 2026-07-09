@@ -1,13 +1,18 @@
-import { NUM_INSTRUMENTS, NUM_STEPS, type StepGrid } from '../audio/messages'
+import { NUM_INSTRUMENTS, NUM_STEPS, type FilterParams, type StepGrid } from '../audio/messages'
 import type { Patch } from '../synth/patches'
 
 export interface AppState {
-  version: 3
+  version: 4
   tempo: number
   swing: number
   mode: 'A' | 'B' | 'AB'
   patterns: { a: StepGrid; b: StepGrid }
   patches: Patch[]
+  filter: FilterParams
+}
+
+export function defaultFilter(): FilterParams {
+  return { mode: 'off', cutoff: 8000, res: 0.3 }
 }
 
 export function emptyGrid(): StepGrid {

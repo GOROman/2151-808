@@ -1,19 +1,24 @@
-import type { AppState } from './pattern'
+import { defaultFilter, type AppState } from './pattern'
 import { defaultPatches } from '../synth/patches'
 
 const KEY = '2151-808-state'
 
-const VERSION = 3
+const VERSION = 4
 
-/** Accept current-version state as-is; salvage patterns from older versions
- *  (their default patches were broken) by resetting patches to the current
- *  defaults. */
+/** Accept current-version state as-is; upgrade older versions in place.
+ *  v3 -> v4 only gains the filter section; pre-v3 default patches were
+ *  broken, so those also get their patches reset. */
 function migrate(s: unknown): AppState | null {
   const st = s as AppState | null
   if (!st || typeof st !== 'object' || typeof st.version !== 'number') return null
   if (st.version === VERSION) return st
   if (st.version < VERSION) {
-    return { ...st, version: VERSION, patches: defaultPatches() }
+    return {
+      ...st,
+      version: VERSION,
+      patches: st.version >= 3 ? st.patches : defaultPatches(),
+      filter: st.filter ?? defaultFilter(),
+    }
   }
   return null
 }

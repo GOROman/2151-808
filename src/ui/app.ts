@@ -2,6 +2,7 @@
 import { NUM_STEPS } from '../audio/messages'
 import type { AppState } from '../sequencer/pattern'
 import { stateToHash } from '../sequencer/storage'
+import { applyVoiceToPatch, parseMdx, type MdxFile } from '../synth/mdx'
 import { buildEditor } from './editor'
 
 export interface UIHandlers {
@@ -15,6 +16,7 @@ export interface UIHandlers {
   fill: () => void
   patchChanged: () => void
   preview: (inst: number, accent: boolean) => void
+  filterChanged: () => void
 }
 
 export interface UIController {
@@ -97,6 +99,54 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
   swingWrap.append(swingVal, swing)
   transport.appendChild(labeled('swing', swingWrap))
 
+  // ---- master filter ----
+  const filtModes = el('div', 'modes')
+  const filtBtns: Record<string, HTMLButtonElement> = {}
+  for (const m of ['off', 'lp', 'hp'] as const) {
+    const b = el('button', 'btn small', m.toUpperCase()) as HTMLButtonElement
+    b.onclick = () => {
+      state.filter.mode = m
+      for (const k in filtBtns) filtBtns[k].classList.toggle('active', k === m)
+      h.filterChanged()
+    }
+    filtBtns[m] = b
+    filtModes.appendChild(b)
+  }
+  filtBtns[state.filter.mode].classList.add('active')
+  transport.appendChild(labeled('filter', filtModes))
+
+  const hzLabel = (hz: number): string => (hz >= 1000 ? (hz / 1000).toFixed(1) + 'k' : String(Math.round(hz)))
+  const cutWrap = el('div', 'knobwrap')
+  const cutVal = el('div', 'knobval', hzLabel(state.filter.cutoff))
+  const cut = document.createElement('input')
+  cut.type = 'range'
+  cut.min = '0'
+  cut.max = '100'
+  // exponential 20Hz..20kHz
+  cut.value = String(Math.round((100 * Math.log10(state.filter.cutoff / 20)) / 3))
+  cut.oninput = () => {
+    state.filter.cutoff = Math.round(20 * Math.pow(10, (Number(cut.value) / 100) * 3))
+    cutVal.textContent = hzLabel(state.filter.cutoff)
+    h.filterChanged()
+  }
+  cutWrap.append(cutVal, cut)
+  transport.appendChild(labeled('cutoff', cutWrap))
+
+  const resWrap = el('div', 'knobwrap')
+  const resVal = el('div', 'knobval', pct(state.filter.res))
+  const res = document.createElement('input')
+  res.type = 'range'
+  res.min = '0'
+  res.max = '100'
+  res.value = String(Math.round(state.filter.res * 100))
+  res.oninput = () => {
+    state.filter.res = Number(res.value) / 100
+    resVal.textContent = pct(state.filter.res)
+    h.filterChanged()
+  }
+  resWrap.append(resVal, res)
+  transport.appendChild(labeled('reso', resWrap))
+
   // pattern mode
   const modeWrap = el('div', 'modes')
   const modeBtns: Record<string, HTMLButtonElement> = {}
@@ -177,6 +227,7 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
       h.preview(i, false)
       refreshSteps()
       editor.select(i)
+      mdxAssign.textContent = `ASSIGN → ${p.short}`
     }
     instBtns.push(b)
     instRow.appendChild(b)
@@ -211,6 +262,62 @@ export function buildUI(root: HTMLElement, state: AppState, h: UIHandlers): UICo
   panel.appendChild(editorHost)
   const editor = buildEditor(editorHost, state, () => h.patchChanged(), (i, acc) => h.preview(i, acc))
   editor.select(0)
+
+  // ---- MDX voice import ----
+  let mdxFile: MdxFile | null = null
+  const mdxRow = el('div', 'mdxrow')
+  mdxRow.appendChild(el('span', 'mdxlabel', 'MDX VOICE'))
+  const mdxInput = document.createElement('input')
+  mdxInput.type = 'file'
+  mdxInput.accept = '.mdx'
+  mdxInput.style.display = 'none'
+  const mdxLoad = el('button', 'btn small', 'LOAD MDX') as HTMLButtonElement
+  mdxLoad.onclick = () => mdxInput.click()
+  const mdxTitle = el('span', 'mdxtitle', '')
+  const mdxSelect = document.createElement('select')
+  mdxSelect.className = 'mdxselect'
+  mdxSelect.disabled = true
+  const mdxAssign = el('button', 'btn small', `ASSIGN → ${state.patches[selectedInst].short}`) as HTMLButtonElement
+  mdxAssign.disabled = true
+  mdxInput.onchange = async () => {
+    const file = mdxInput.files?.[0]
+    mdxInput.value = ''
+    if (!file) return
+    try {
+      const parsed = parseMdx(await file.arrayBuffer())
+      if (parsed.voices.length === 0) {
+        mdxTitle.textContent = 'no voices found'
+        return
+      }
+      mdxFile = parsed
+      mdxTitle.textContent = `${parsed.title || file.name} — ${parsed.voices.length} voices`
+      mdxSelect.innerHTML = ''
+      parsed.voices.forEach((v, i) => {
+        const o = document.createElement('option')
+        o.value = String(i)
+        o.textContent = `@${v.num}  (alg${v.alg} fb${v.fb})`
+        mdxSelect.appendChild(o)
+      })
+      mdxSelect.disabled = false
+      mdxAssign.disabled = false
+    } catch (err) {
+      mdxFile = null
+      mdxSelect.disabled = true
+      mdxAssign.disabled = true
+      mdxTitle.textContent = 'load failed: ' + (err instanceof Error ? err.message : String(err))
+    }
+  }
+  mdxAssign.onclick = async () => {
+    const v = mdxFile?.voices[Number(mdxSelect.value)]
+    if (!v) return
+    await ensureAudio()
+    applyVoiceToPatch(v, state.patches[selectedInst])
+    h.patchChanged()
+    editor.select(selectedInst)
+    h.preview(selectedInst, false)
+  }
+  mdxRow.append(mdxLoad, mdxSelect, mdxAssign, mdxTitle, mdxInput)
+  panel.appendChild(mdxRow)
 
   const footer = el('div', 'footer',
     'YM2151 (OPM) emulation by <a href="https://github.com/aaronsgiles/ymfm" target="_blank" rel="noreferrer">ymfm</a>' +
